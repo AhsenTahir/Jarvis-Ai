@@ -7,8 +7,9 @@ from threading import Timer
 import threading
 import sys
 import os
+import re  
 
-os.environ['GEMINI_API_KEY'] = 'enter you api key here'
+os.environ['GEMINI_API_KEY'] = 'enter your api key here'
 
 def text_to_speech(text):
     engine = pyttsx3.init()
@@ -34,6 +35,10 @@ def speech_to_text():
     except sr.RequestError:
         print("Sorry, my speech service is down")
     return None
+def clean_response(text):
+    # Remove unwanted characters using regex
+    clean_text = re.sub(r'[\*#,_~`]', '', text)
+    return clean_text
 
 def get_gemini_response(prompt):
     api_key = os.environ.get('GEMINI_API_KEY')
@@ -56,6 +61,7 @@ def handle_command(text):
             error_response = "Sorry, I couldn't understand the website name."
     else:
         response = get_gemini_response(text)
+        response = clean_response(response)
     print("Jarvis:", response)
     text_to_speech(response)
             
