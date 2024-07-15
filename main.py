@@ -8,8 +8,13 @@ import threading
 import sys
 import os
 import re  
+import requests
+
 
 os.environ['GEMINI_API_KEY'] = 'enter your api key here'
+# Set up News API key
+NEWS_API_KEY = '46aa96500c4b446ebd603fe47ba77b29'
+NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
 
 def text_to_speech(text):
     engine = pyttsx3.init()
@@ -47,6 +52,17 @@ def get_gemini_response(prompt):
     response = model.generate_content(prompt)
     return response.text
     
+def fetch_news(category=None):
+  params = {
+    'apiKey': NEWS_API_KEY,
+    'country': 'us',
+    'category': category,
+    'pageSize': 5  # Number of articles to fetch
+  }
+  response = requests.get(NEWS_API_URL, params=params)
+  news_data = response.json()
+  articles = news_data.get('articles', [])
+  return articles
 
 def handle_command(text):
     if "open" in text and "website" in text:
@@ -59,9 +75,32 @@ def handle_command(text):
             webbrowser.open(url)
         except IndexError:
             error_response = "Sorry, I couldn't understand the website name."
+    elif "news" in text:
+        category = None
+        if "technology" in text:
+            category = "technology"
+        elif "sports" in text:
+            category = "sports"
+        elif "politics" in text:
+            category = "politics"
+        
+        articles = fetch_news(category)
+        if articles:
+            response = "Here are the latest news headlines:\n"
+            for article in articles:
+                title = article.get('title')
+                url = article.get('url')
+                response += f"- {title}\n"
+                print(f"-(URL: {url})" if url else "") 
+            print("Jarvis:", response)
+            text_to_speech(response)
+        else:
+            response = "Sorry, I couldn't fetch the news at this moment."
+            print("Jarvis:", response)
+            text_to_speech(response)
     else:
-        response = get_gemini_response(text)
-        response = clean_response(response)
+     response = get_gemini_response(text)
+     response = clean_response(response)
     print("Jarvis:", response)
     text_to_speech(response)
             
