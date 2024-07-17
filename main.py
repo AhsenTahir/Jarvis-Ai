@@ -9,20 +9,52 @@ import sys
 import os
 import re  
 import requests
+import uuid
+from elevenlabs import VoiceSettings
+from elevenlabs.client import ElevenLabs
+import os
+from playsound import playsound
 
-
+ELEVENLABS_API_KEY = os.getenv("enter your api key")
+client = ElevenLabs(
+    api_key=ELEVENLABS_API_KEY,
+)
 os.environ['GEMINI_API_KEY'] = 'enter your api key here'
 # Set up News API key
-NEWS_API_KEY = '46aa96500c4b446ebd603fe47ba77b29'
+NEWS_API_KEY = 'enter your api key'
 NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
 
-def text_to_speech(text):
-    engine = pyttsx3.init()
-    engine.setProperty('voice', engine.getProperty('voices')[0].id)
-    engine.setProperty('rate', 180)
-    engine.setProperty('volume', 1.0)
-    engine.say(text)
-    engine.runAndWait()
+def text_to_speech(text: str) -> str:
+    # Calling the text_to_speech conversion API with detailed parameters
+    response = client.text_to_speech.convert(
+        voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
+        optimize_streaming_latency="0",
+        output_format="mp3_22050_32",
+        text=text,
+        model_id="eleven_turbo_v2",  # use the turbo model for low latency
+        voice_settings=VoiceSettings(
+            stability=0.0,
+            similarity_boost=1.0,
+            style=0.0,
+            use_speaker_boost=True,
+        ),
+    )
+
+    # Generating a unique file name for the output MP3 file
+    save_file_path = f"{uuid.uuid4()}.mp3"
+
+    # Writing the audio to a file
+    with open(save_file_path, "wb") as f:
+        for chunk in response:
+            if chunk:
+                f.write(chunk)
+
+    # Play the audio file
+    playsound(save_file_path)
+
+    # Delete the audio file after playing
+    os.remove(save_file_path)
+
 
 def speech_to_text():
     recognizer = sr.Recognizer()
