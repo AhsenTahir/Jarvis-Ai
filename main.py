@@ -26,13 +26,17 @@ os.environ['GEMINI_API_KEY'] = 'enter your api key here'
 WEATHER_BASE_URL='https://api.openweathermap.org/data/2.5/'
 WEATHER_API_KEY='ae3ee0c6bf70e4f7873fa61bc44b07df'
 
+#function to process the weather data
 def fetch_weather_data(city, country_code):
+    #parameters for the weather information
     params = {
         'q': f"{city},{country_code}",
         'appid': WEATHER_API_KEY,
         'units': 'imperial'
     }
+    #extracting weather information
     try:
+         # Extract relevant weather information from the parsed data
         response = requests.get(WEATHER_BASE_URL, params=params)
         response.raise_for_status()
         weather_data = response.json()
@@ -40,7 +44,7 @@ def fetch_weather_data(city, country_code):
         description = weather_data['weather'][0]['description']
         temp = weather_data['main']['temp']
         humidity = weather_data['main']['humidity']
-
+    # Create a dictionary with processed weather data
         processed_weather_data = {
             'main_weather': main_weather,
             'description': description,
@@ -55,28 +59,9 @@ def fetch_weather_data(city, country_code):
 
 
 
-def handle_command(text):
-   weather_actions = {
-    "what's the weather like today|today's weather": lambda text: fetch_weather_data(""),  # Empty location for current location
-    "can you tell me the weather in (.*)": lambda text: fetch_weather_data(text.split("in ")[-1]),  # Capture location after "in"
-    "is it raining (.*)": lambda text: fetch_weather_data(text.split("raining ")[-1]),  # Capture location after "raining" (optional)
-    "what's the temperature (.*)": lambda text: fetch_weather_data(text.split("temperature ")[-1]),  # Capture location after "temperature" (optional)
-    "weather in my area|weather near me": lambda text: fetch_weather_data(""),  # Use current location
-    # ... add more phrases and actions
 
-       text = text.lower()  # Case-insensitive matching
-
-  for phrase, action in weather_actions.items():
-    match = re.match(phrase, text)
-    if match:
-      location = match.group(1) if match.groups() else ""  # Extract captured location (if any)
-      fetch_weather_data(location)
-      return  # Exit after successful match and action
-
-  print("Sorry, I couldn't understand your weather request.")
-}
 # Set up News API key
-NEWS_API_KEY = 'enter your api key'
+NEWS_API_KEY = 'AIzaSyANsXdan1M7qRVM5Y5cN0hsQAObG3hhPfE'
 NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
 
 
@@ -154,16 +139,49 @@ def fetch_news(category=None):
   return articles
 
 def handle_command(text):
+    text = text.lower()  # Case-insensitive matching
+
+    # Weather-related commands
+    weather_actions = {
+        r"what's the weather like today|today's weather": "",
+        r"can you tell me the weather in (.+)": lambda match: match.group(1),
+        r"is it raining( in (.+))?": lambda match: match.group(2) if match.group(2) else "",
+        r"what's the temperature( in (.+))?": lambda match: match.group(2) if match.group(2) else "",
+        r"weather in my area|weather near me": ""
+    }
+
+    for pattern, action in weather_actions.items():
+        match = re.match(pattern, text)
+        if match:
+            location = action(match) if callable(action) else action
+            if not location:
+                location = "New York,US"  # Default location if not specified
+            else:
+                location += ",US"  # Assuming US for simplicity, can be improved
+            
+            weather_data = fetch_weather_data(*location.split(','))
+            if isinstance(weather_data, dict):
+                response = f"Here's the weather for {location.split(',')[0]}:\n"
+                response += f"Condition: {weather_data['main_weather']}, {weather_data['description']}\n"
+                response += f"Temperature: {weather_data['temperature']}°F\n"
+                response += f"Humidity: {weather_data['humidity']}%"
+            else:
+                response = weather_data  # This will be the error message
+            
+            print("Jarvis:", response)
+            text_to_speech(response)
+            return
+
+    # Existing command handling
     if "open" in text and "website" in text:
         try:
             site = text.split("open ")[1].split(" website")[0].strip()
-            # urls are not uppercase and do not have spaces
             formatted_site = site.replace(" ", "").lower()
             url = f"http://{formatted_site}.com"
             response = f"Opening {site} website"
             webbrowser.open(url)
         except IndexError:
-            error_response = "Sorry, I couldn't understand the website name."
+            response = "Sorry, I couldn't understand the website name."
     elif "news" in text:
         category = None
         if "technology" in text:
@@ -181,19 +199,14 @@ def handle_command(text):
                 url = article.get('url')
                 response += f"- {title}\n"
                 print(f"-(URL: {url})" if url else "") 
-            print("Jarvis:", response)
-            text_to_speech(response)
         else:
             response = "Sorry, I couldn't fetch the news at this moment."
-            print("Jarvis:", response)
-            text_to_speech(response)
     else:
-     response = get_gemini_response(text)
-     response = clean_response(response)
+        response = get_gemini_response(text)
+        response = clean_response(response)
+
     print("Jarvis:", response)
     text_to_speech(response)
-            
-print("Configuration Done")
 
 def main():
     shutdown_event = threading.Event()
