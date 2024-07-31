@@ -15,7 +15,7 @@ from elevenlabs.client import ElevenLabs
 import os
 from playsound import playsound
 
-ELEVENLABS_API_KEY = os.getenv("enter your api key")
+ELEVENLABS_API_KEY = os.getenv("sk_cf4ee738c2451d630710c2153efdd3addeb55a684bf9a877")
 client = ElevenLabs(
     api_key=ELEVENLABS_API_KEY,
 )
