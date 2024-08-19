@@ -1,7 +1,8 @@
+#============================================#
+#               Imports
+#============================================#
 import webbrowser
 import speech_recognition as sr
-import pyttsx3
-import time
 import google.generativeai as genai
 from threading import Timer
 import threading
@@ -12,31 +13,43 @@ import requests
 import uuid
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
-import os
+import pywhatkit as kit
 from playsound import playsound
+import random
 
-ELEVENLABS_API_KEY = os.getenv("sk_cf4ee738c2451d630710c2153efdd3addeb55a684bf9a877")
-client = ElevenLabs(
-    api_key=ELEVENLABS_API_KEY,
-)
-os.environ['GEMINI_API_KEY'] = 'enter your api key here'
+#============================================#
+#               API Keys
+#============================================#
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+GEMINI_API_KEY = 'enter your api key here'
+WEATHER_API_KEY = 'ae3ee0c6bf70e4f7873fa61bc44b07df'
+NEWS_API_KEY = 'AIzaSyANsXdan1M7qRVM5Y5cN0hsQAObG3hhPfE'
 
-#set up weather
+#============================================#
+#               Constants
+#============================================#
+WEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5/'
+NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
 
-WEATHER_BASE_URL='https://api.openweathermap.org/data/2.5/'
-WEATHER_API_KEY='ae3ee0c6bf70e4f7873fa61bc44b07df'
+client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+os.environ['GEMINI_API_KEY'] = GEMINI_API_KEY
 
-#function to process the weather data
+music_list = []
+popular_songs = [
+    "Shape of You", "Blinding Lights", "Dance Monkey",
+    "Rockstar", "Someone You Loved"
+]
+
+#============================================#
+#               Weather Functions
+#============================================#
 def fetch_weather_data(city, country_code):
-    #parameters for the weather information
     params = {
         'q': f"{city},{country_code}",
         'appid': WEATHER_API_KEY,
         'units': 'imperial'
     }
-    #extracting weather information
     try:
-         # Extract relevant weather information from the parsed data
         response = requests.get(WEATHER_BASE_URL, params=params)
         response.raise_for_status()
         weather_data = response.json()
@@ -44,7 +57,6 @@ def fetch_weather_data(city, country_code):
         description = weather_data['weather'][0]['description']
         temp = weather_data['main']['temp']
         humidity = weather_data['main']['humidity']
-    # Create a dictionary with processed weather data
         processed_weather_data = {
             'main_weather': main_weather,
             'description': description,
@@ -57,23 +69,16 @@ def fetch_weather_data(city, country_code):
     except Exception as e:
         return f"Error: An unexpected error occurred. ({e})"
 
-
-
-
-# Set up News API key
-NEWS_API_KEY = 'AIzaSyANsXdan1M7qRVM5Y5cN0hsQAObG3hhPfE'
-NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
-
-
-
+#============================================#
+#               Speech Functions
+#============================================#
 def text_to_speech(text: str) -> str:
-    # Calling the text_to_speech conversion API with detailed parameters
     response = client.text_to_speech.convert(
-        voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
+        voice_id="pNInz6obpgDQGcFmaJgB",
         optimize_streaming_latency="0",
         output_format="mp3_22050_32",
         text=text,
-        model_id="eleven_turbo_v2",  # use the turbo model for low latency
+        model_id="eleven_turbo_v2",
         voice_settings=VoiceSettings(
             stability=0.0,
             similarity_boost=1.0,
@@ -81,22 +86,13 @@ def text_to_speech(text: str) -> str:
             use_speaker_boost=True,
         ),
     )
-
-    # Generating a unique file name for the output MP3 file
     save_file_path = f"{uuid.uuid4()}.mp3"
-
-    # Writing the audio to a file
     with open(save_file_path, "wb") as f:
         for chunk in response:
             if chunk:
                 f.write(chunk)
-
-    # Play the audio file
     playsound(save_file_path)
-
-    # Delete the audio file after playing
     os.remove(save_file_path)
-
 
 def speech_to_text():
     recognizer = sr.Recognizer()
@@ -114,8 +110,11 @@ def speech_to_text():
     except sr.RequestError:
         print("Sorry, my speech service is down")
     return None
+
+#============================================#
+#               Gemini AI Functions
+#============================================#
 def clean_response(text):
-    # Remove unwanted characters using regex
     clean_text = re.sub(r'[\*#,_~`]', '', text)
     return clean_text
 
@@ -125,23 +124,28 @@ def get_gemini_response(prompt):
     model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text
-    
+
+#============================================#
+#               News Functions
+#============================================#
 def fetch_news(category=None):
-  params = {
-    'apiKey': NEWS_API_KEY,
-    'country': 'us',
-    'category': category,
-    'pageSize': 5  # Number of articles to fetch
-  }
-  response = requests.get(NEWS_API_URL, params=params)
-  news_data = response.json()
-  articles = news_data.get('articles', [])
-  return articles
+    params = {
+        'apiKey': NEWS_API_KEY,
+        'country': 'us',
+        'category': category,
+        'pageSize': 5
+    }
+    response = requests.get(NEWS_API_URL, params=params)
+    news_data = response.json()
+    articles = news_data.get('articles', [])
+    return articles
 
+#============================================#
+#               Command Handling
+#============================================#
 def handle_command(text):
-    text = text.lower()  # Case-insensitive matching
+    text = text.lower()
 
-    # Weather-related commands
     weather_actions = {
         r"what's the weather like today|today's weather": "",
         r"can you tell me the weather in (.+)": lambda match: match.group(1),
@@ -155,9 +159,9 @@ def handle_command(text):
         if match:
             location = action(match) if callable(action) else action
             if not location:
-                location = "New York,US"  # Default location if not specified
+                location = "New York,US"
             else:
-                location += ",US"  # Assuming US for simplicity, can be improved
+                location += ",US"
             
             weather_data = fetch_weather_data(*location.split(','))
             if isinstance(weather_data, dict):
@@ -166,13 +170,12 @@ def handle_command(text):
                 response += f"Temperature: {weather_data['temperature']}°F\n"
                 response += f"Humidity: {weather_data['humidity']}%"
             else:
-                response = weather_data  # This will be the error message
+                response = weather_data
             
             print("Jarvis:", response)
             text_to_speech(response)
             return
 
-    # Existing command handling
     if "open" in text and "website" in text:
         try:
             site = text.split("open ")[1].split(" website")[0].strip()
@@ -201,6 +204,9 @@ def handle_command(text):
                 print(f"-(URL: {url})" if url else "") 
         else:
             response = "Sorry, I couldn't fetch the news at this moment."
+    elif "play music" in text:
+        play_youtube_music(text)
+        return
     else:
         response = get_gemini_response(text)
         response = clean_response(response)
@@ -208,6 +214,55 @@ def handle_command(text):
     print("Jarvis:", response)
     text_to_speech(response)
 
+#============================================#
+#               Music Functions
+#============================================#
+def add_favsong():
+    max_retries = 3
+    for _ in range(max_retries):
+        text_to_speech("Do you have any favourite song you want to add to my memory?")
+        new_song = speech_to_text()
+        if new_song:
+            music_list.append(new_song)
+            print(f"I have added {new_song} to your favourites.")
+            return
+        else:
+            text_to_speech("I didn't catch that, let's try again")
+    text_to_speech("I'm sorry, I couldn't add a new song after several attempts.")
+
+def play_youtube_music(command):
+    query = command.replace("play music", "").strip()
+    if not query:
+        if not music_list:
+            text_to_speech("Your favourite songs list is empty, would you like to add any songs?")
+            response = speech_to_text()
+            if response and "yes" in response.lower():
+                add_favsong()
+        if music_list:
+            text_to_speech("I will play one of your favourite songs")
+            random_song = random.choice(music_list)
+            text_to_speech(f"Playing {random_song} for you.")
+            try:
+                kit.playonyt(random_song)
+            except Exception as e:
+                text_to_speech(f"I am sorry, I couldn't play that. The error was: {str(e)}")
+        else:
+            text_to_speech("I'll play a random popular song for you.")
+            random_popular_song = random.choice(popular_songs)
+            text_to_speech(f"Playing {random_popular_song} for you.")
+            try:
+                kit.playonyt(random_popular_song)
+            except Exception as e:
+                text_to_speech(f"I am sorry, I could not play that. The error was: {str(e)}")
+    else:
+        try:
+            kit.playonyt(query)
+        except Exception as e:
+            text_to_speech(f"An error occurred while trying to play the music. The error was: {str(e)}")
+
+#============================================#
+#               Main Function
+#============================================#
 def main():
     shutdown_event = threading.Event()
     shutdown_timer = None
@@ -247,5 +302,8 @@ def main():
             
     shutdown()
 
+#============================================#
+#               Entry Point
+#============================================#
 if __name__ == "__main__":
     main()
