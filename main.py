@@ -16,6 +16,7 @@ from elevenlabs.client import ElevenLabs
 import pywhatkit as kit
 from playsound import playsound
 import random
+from googlesearch import search
 
 #============================================#
 #               API Keys
@@ -141,6 +142,21 @@ def fetch_news(category=None):
     return articles
 
 #============================================#
+#             Google Search Functions
+#============================================#
+def google_search_and_read(query):
+    try:
+        # Perform Google search
+        search_results = search(query, num_results=1)
+        if search_results:
+            # Read the first search result
+            text_to_speech(search_results[0])
+        else:
+            text_to_speech(f"Sorry, couldn't find the information about '{query}'.")
+    except Exception as e:
+        text_to_speech(f"An error occurred while looking for that information: {str(e)}")
+
+#============================================#
 #               Command Handling
 #============================================#
 def handle_command(text):
@@ -193,6 +209,9 @@ def handle_command(text):
             category = "sports"
         elif "politics" in text:
             category = "politics"
+        
+        # Search Google and read the information
+        google_search_and_read(text)
         
         articles = fetch_news(category)
         if articles:
