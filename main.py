@@ -17,14 +17,15 @@ import pywhatkit as kit
 from playsound import playsound
 import random
 from googlesearch import search
+from config import ELEVENLABS_API_KEY, GEMINI_API_KEY, WEATHER_API_KEY, NEWS_API_KEY 
 
 #============================================#
 #               API Keys
 #============================================#
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-GEMINI_API_KEY = 'enter your api key here'
-WEATHER_API_KEY = 'ae3ee0c6bf70e4f7873fa61bc44b07df'
-NEWS_API_KEY = 'AIzaSyANsXdan1M7qRVM5Y5cN0hsQAObG3hhPfE'
+
+GEMINI_API_KEY = GEMINI_API_KEY
+WEATHER_API_KEY = 'WEATHER_API_KEY'
+NEWS_API_KEY = 'NEWS_API_KEY    '
 
 #============================================#
 #               Constants
@@ -32,7 +33,7 @@ NEWS_API_KEY = 'AIzaSyANsXdan1M7qRVM5Y5cN0hsQAObG3hhPfE'
 WEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5/'
 NEWS_API_URL = 'https://newsapi.org/v2/top-headlines'
 
-client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+client = ElevenLabs(api_key=ELEVENLABS_API_KEY)  # Use the imported API key
 os.environ['GEMINI_API_KEY'] = GEMINI_API_KEY
 
 music_list = []
