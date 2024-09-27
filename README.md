@@ -10,7 +10,7 @@ JARVIS AI is built to assist users in various domains, including:
 - **News Fetching**: Stay updated with the latest headlines across different categories.(data is fetched from news api)
 - **Music Playback**: Play your favorite songs or discover new music effortlessly.
 - **Google Search**: Quickly find information on any topic with voice commands.(using Gemini api)
--**Website automation**: say it to "open xyz website" and it will open it to your browser.
+- **Website automation**: say it to "open xyz website" and it will open it to your browser.
 
 ## Features
 
